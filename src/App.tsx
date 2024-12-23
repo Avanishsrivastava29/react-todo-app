@@ -1,7 +1,7 @@
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import TodoForm from "./components/todo-form";
-import { useContext, useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useContext, useEffect, useState } from "react";
 import ListItem from "./components/list-item";
 import { FaNoteSticky, FaSun, FaTrashCan, FaMoon } from "react-icons/fa6";
 import toast from "react-hot-toast";
@@ -16,22 +16,27 @@ export default function App() {
     const value = localStorage.getItem("notes");
     return value ? JSON.parse(value) : [];
   });
-  useEffect(() => {
-    window.localStorage.setItem("notes", JSON.stringify(notes));
-  }, [notes]);
-  const [text, setText] = useState("");
 
+  const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [searchquery, setSearchQuery] = useState("");
-  const [filteredNotes, setFilteredNotes] = useState(notes);
 
+  // Manage loading state
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 5000);
-
     return () => clearTimeout(timer);
   }, []);
+
+  // Persist notes to localStorage
+  useEffect(() => {
+    window.localStorage.setItem("notes", JSON.stringify(notes));
+  }, [notes]);
+
+  const filteredNotes = notes.filter((note) =>
+    note.title.toLowerCase().includes(searchquery.toLowerCase())
+  );
 
   if (isLoading) {
     return <Loading />;
@@ -50,6 +55,10 @@ export default function App() {
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (!text.trim()) {
+      toast.error("Cannot add an empty note!");
+      return;
+    }
     toast.promise(
       new Promise((resolve) => {
         addNote();
@@ -68,9 +77,8 @@ export default function App() {
   }
 
   function handleDelete(id) {
-    console.log(id);
     setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
-    toast.success("Todo  Deleted!");
+    toast.success("Todo Deleted!");
   }
 
   function toggleNote(id) {
@@ -81,20 +89,9 @@ export default function App() {
     );
   }
 
-  function handleSearch() {
-    setFilteredNotes(
-      notes.filter((note) => {
-        return note.title.toLowerCase().includes(searchquery.toLowerCase());
-      })
-    );
+  function handleSearch(e) {
+    setSearchQuery(e.target.value);
   }
-  // useEffect(() => {
-  //   setFilteredNotes(
-  //     notes.filter((note) => {
-  //       note.title.toLowerCase().includes(searchquery.toLowerCase());
-  //     })
-  //   );
-  // }, [searchquery,  ]);
 
   return (
     <div
@@ -161,12 +158,11 @@ export default function App() {
             className="form-control"
             placeholder="Search Todos"
             value={searchquery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearch}
           />
-          <button onClick={handleSearch}>search</button>
 
           <ul className="list-group flex-column">
-            {notes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
               <li
                 className={`list-group-item ${darkTheme ? "text-light" : ""}`}
               >
